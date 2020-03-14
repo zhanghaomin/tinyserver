@@ -17,7 +17,7 @@ typedef struct RequestLine {
 
 typedef struct Request {
     RequestLine* request_line;
-    char* header;
+    HashTable* header;
 } Request;
 
 Request* G_REQ;

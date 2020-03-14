@@ -17,8 +17,9 @@ extern Request* G_REQ;
 %type <request> request
 %type <request_url> request_url
 %type <request_line> request_line
-%type <str> request_header method abs_path host request_headers
+%type <str> method abs_path host
 %type <num> port
+%type <ht> request_header_list request_header
 
 %union {
     int num;
@@ -26,11 +27,12 @@ extern Request* G_REQ;
     RequestLine* request_line;
     RequestUrl* request_url; 
     Request* request; 
+    HashTable* ht;
 }
 
 %%
 request:
-      request_line T_CRLF request_headers T_CRLF {
+      request_line T_CRLF request_header T_CRLF {
         $$ = (Request*)malloc(sizeof(Request)); 
         $$->request_line = $1; 
         $$->header = $3;
@@ -48,16 +50,14 @@ request_line:
       }
     ;
 
-request_headers:
-      /* empty */ {}
-    | request_header {}
-    | request_headers request_header {}
+request_header:
+      /* empty */ { $$ = NULL; }
+    | request_header_list { $$ = $1; }
     ;
 
-request_header:
-      T_HEADER_HOST T_COLON T_SP host port T_CRLF {}
-    | T_USER_AGENT T_COLON T_SP T_ANY T_CRLF {}
-    | T_ACCEPT T_COLON T_SP T_ANY T_CRLF {}
+request_header_list:
+      T_ANY T_COLON T_ANY T_CRLF { $$ = ht_init(NULL, NULL); ht_insert_str($$, $1, $3); }
+    | request_header_list T_ANY T_COLON T_ANY T_CRLF { ht_insert_str($$, $2, $4); }
     ;
 
 method:

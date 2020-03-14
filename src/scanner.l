@@ -17,16 +17,23 @@ ipv4 {num}+\.{num}+\.{num}+\.{num}+
 path_segements {segement}(\/{segement})*
 segement ({alphanum}|\.)+
 
-%s start_header_val
+%x start_header_key
+%x start_header_val
 %%
 
-"\r\n" {return T_CRLF;}
+"\r\n" {
+    BEGIN(start_header_key);
+    return T_CRLF;
+}
+
+<start_header_key>"\r\n" {
+    BEGIN(INITIAL);
+    return T_CRLF;
+}
 
 " " {return T_SP;}
 
-":" {return T_COLON;}
-
-"GET" {return T_GET;}
+^"GET" {return T_GET;}
 
 "http://" {return T_SCHEMA;}
 
@@ -37,27 +44,19 @@ segement ({alphanum}|\.)+
 
 "HTTP" {return T_HTTP;}
 
-"Host" {
-    yylval.str = strdup(yytext);
-    return T_HEADER_HOST;
-}
-
-"User-Agent" {
-    yylval.str = strdup(yytext);
+<start_header_key>:[ ]+ {
     BEGIN(start_header_val);
-    return T_USER_AGENT;
+    return T_COLON;
 }
 
-"Accept" {
+<start_header_key>[^:\r\n ]+ {
     yylval.str = strdup(yytext);
-    BEGIN(start_header_val);
-    return T_ACCEPT;
+    return T_ANY;
 }
 
-<start_header_val>[^:\r\n ]+ {
+<start_header_val>[^\r\n]+ {
     yylval.str = strdup(yytext);
-    printf("match any word:%s\n", yytext);
-    BEGIN(0);
+    BEGIN(INITIAL);
     return T_ANY;
 }
 
