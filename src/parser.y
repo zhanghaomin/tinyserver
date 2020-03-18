@@ -6,7 +6,7 @@
 
 int yylex();
 int yyerror(char *s);
-extern Request* G_REQ;
+Request* G_REQ;
 %}
 
 %token T_CRLF T_SP
@@ -17,9 +17,10 @@ extern Request* G_REQ;
 %type <request> request
 %type <request_url> request_url
 %type <request_line> request_line
-%type <str> method abs_path host
+%type <str> abs_path host
 %type <num> port
 %type <ht> request_header_list request_header
+%type <req_method> method
 
 %union {
     int num;
@@ -28,6 +29,7 @@ extern Request* G_REQ;
     RequestUrl* request_url; 
     Request* request; 
     HashTable* ht;
+    RequestMethod req_method;
 }
 
 %%
@@ -56,12 +58,12 @@ request_header:
     ;
 
 request_header_list:
-      T_ANY T_COLON T_ANY T_CRLF { $$ = ht_init(NULL, NULL); ht_insert_str($$, $1, $3); }
+      T_ANY T_COLON T_ANY T_CRLF { $$ = ht_init((HtValueCtor)strdup, free); ht_insert_str($$, $1, $3); }
     | request_header_list T_ANY T_COLON T_ANY T_CRLF { ht_insert_str($$, $2, $4); }
     ;
 
 method:
-      T_GET { $$ = strdup("get"); }
+      T_GET { $$ = GET; }
     ;
 
 request_url:

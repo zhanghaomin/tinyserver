@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define WWWROOT "www"
+
 extern Request* G_REQ;
 extern int yyparse();
 extern int lex_read(char* s, int len);
@@ -15,22 +17,73 @@ extern void lex_read_line(FILE* fp, char* s, int len);
 
 static int bad_request(int fd)
 {
-    return write(fd, "HTTP/1.1 400 Bad Request\r\n\r\n", 28);
+    Response* resp;
+    int len;
+    char* out;
+    resp = new_response();
+    with_status(resp, BAD_REQUEST);
+    out = serialize_response(resp, &len);
+    write(fd, out, len);
+    free(out);
+    destory_response(resp);
+    return 1;
+}
+
+static int not_found(int fd)
+{
+    Response* resp;
+    int len;
+    char* out;
+    resp = new_response();
+    with_status(resp, NOT_FOUND);
+    out = serialize_response(resp, &len);
+    write(fd, out, len);
+    free(out);
+    destory_response(resp);
+    return 1;
+}
+
+static int ok_response(int fd, char* body)
+{
+    Response* resp;
+    int len;
+    char* out;
+    resp = new_response();
+    with_status(resp, OK);
+    with_body(resp, body);
+    out = serialize_response(resp, &len);
+    write(fd, out, len);
+    free(out);
+    destory_response(resp);
+    return 1;
+}
+
+static void destory_request(Request* req)
+{
+    ht_release(req->header);
+    free(req->request_line->request_url->abs_path);
+    free(req->request_line->request_url->host);
+    free(req->request_line->request_url);
+    free(req->request_line->version);
+    free(req->request_line);
+    free(req);
 }
 
 int main(int argc UNUSED, char const* argv[] UNUSED)
 {
-    /* code */
-    int listenfd, connfd;
+    int listenfd, connfd, read_file_fd, nread = 0, totalread = 0;
+    char *buf, *origin;
+    char filename[1024];
+    char file_content[1024];
+
     listenfd = tcp_listen(8088);
 
     if (listenfd < 0) {
         sys_err("listen");
     }
 
-    char* buf = calloc(1, 1024);
-    char* origin = buf;
-    int nread = 0, totalread = 0;
+    buf = calloc(1, 1024);
+    origin = buf;
 
     while (1) {
         buf = origin;
@@ -57,18 +110,26 @@ int main(int argc UNUSED, char const* argv[] UNUSED)
                     goto close;
                 }
 
-                // handle request and response
-                printf("host:%s port:%d abs_path:%s method:%s version:%s\n", G_REQ->request_line->request_url->host,
-                    G_REQ->request_line->request_url->port,
-                    G_REQ->request_line->request_url->abs_path,
-                    G_REQ->request_line->method,
-                    G_REQ->request_line->version);
-
-                if (strcmp(G_REQ->request_line->request_url->abs_path, "/index.html") == 0) {
-                    write(connfd, "HTTP/1.1 200 OK\r\nContent-Length:11\r\n\r\nhello world", 50);
-                } else {
+                if (G_REQ->request_line->method != GET) {
                     bad_request(connfd);
+                    goto close;
                 }
+
+                sprintf(filename, WWWROOT "%s", G_REQ->request_line->request_url->abs_path);
+                read_file_fd = open(filename, O_RDONLY);
+
+                if (read_file_fd < 0) {
+                    if (errno == ENOENT) {
+                        not_found(connfd);
+                    } else if (errno == EACCES) {
+                        // 403
+                    }
+                } else {
+                    ssize_t r = read(read_file_fd, file_content, 1024);
+                    file_content[r] = '\0';
+                    ok_response(connfd, file_content);
+                }
+
                 break;
             }
         }
@@ -85,6 +146,11 @@ int main(int argc UNUSED, char const* argv[] UNUSED)
             printf("client close conn\n");
         }
     close:
+        if (G_REQ != NULL) {
+            destory_request(G_REQ);
+            G_REQ = NULL;
+        }
+
         // 服务端关闭链接
         close(connfd);
         printf("close conn\n");

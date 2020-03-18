@@ -38,11 +38,11 @@ int main(int argc UNUSED, char const* argv[] UNUSED)
     lex_read(s, sizeof(s));
     // fclose(f);
     char str[1024] = { 0 };
-    sprintf(str, "abs_path:%s method:%s version:%s",
+    sprintf(str, "abs_path:%s method:%d version:%s",
         G_REQ->request_line->request_url->abs_path,
         G_REQ->request_line->method,
         G_REQ->request_line->version);
-    assert_eq_str(str, "abs_path:/index.html method:get version:HTTP/1.1");
+    assert_eq_str(str, "abs_path:/index.html method:0 version:HTTP/1.1");
     assert(G_REQ->header->cnt == 13);
     assert_eq_str(ht_find_str(G_REQ->header, "Sec-Fetch-Mode"), "navigate");
 
@@ -55,12 +55,12 @@ int main(int argc UNUSED, char const* argv[] UNUSED)
     lex_read(s2, sizeof(s2));
     // fclose(f);
     char str2[1024] = { 0 };
-    sprintf(str2, "host:%s port:%d abs_path:%s method:%s version:%s", G_REQ->request_line->request_url->host,
+    sprintf(str2, "host:%s port:%d abs_path:%s method:%d version:%s", G_REQ->request_line->request_url->host,
         G_REQ->request_line->request_url->port,
         G_REQ->request_line->request_url->abs_path,
         G_REQ->request_line->method,
         G_REQ->request_line->version);
-    assert_eq_str(str2, "host:(null) port:0 abs_path:/index.html method:get version:HTTP/1.1");
+    assert_eq_str(str2, "host:(null) port:0 abs_path:/index.html method:0 version:HTTP/1.1");
 
     printf("parser pass\n");
     return 0;

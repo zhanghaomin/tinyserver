@@ -3,6 +3,11 @@
 
 #include "ht.h"
 
+typedef enum {
+    GET,
+    POST
+} RequestMethod;
+
 typedef struct RequestUrl {
     char* host;
     int port;
@@ -11,7 +16,7 @@ typedef struct RequestUrl {
 
 typedef struct RequestLine {
     RequestUrl* request_url;
-    char* method;
+    RequestMethod method;
     char* version;
 } RequestLine;
 
@@ -20,5 +25,23 @@ typedef struct Request {
     HashTable* header;
 } Request;
 
-Request* G_REQ;
+typedef enum {
+    OK,
+    BAD_REQUEST,
+    NOT_FOUND
+} ResponseCode;
+
+typedef struct Response {
+    ResponseCode code;
+    char* msg;
+    char* body;
+    int content_length;
+    HashTable* header;
+} Response;
+
+Response* new_response();
+void with_status(Response* resp, ResponseCode code);
+void with_body(Response* resp, char* body);
+void destory_response(Response* resp);
+char* serialize_response(Response* resp, int* len);
 #endif

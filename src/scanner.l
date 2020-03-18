@@ -1,4 +1,4 @@
-%option noyywrap nodefault noyylineno case-insensitive nounput noinput
+%option noyywrap noyylineno case-insensitive nounput noinput
 
 %{
 #include "include/http.h"
@@ -17,16 +17,16 @@ ipv4 {num}+\.{num}+\.{num}+\.{num}+
 path_segements {segement}(\/{segement})*
 segement ({alphanum}|\.)+
 
-%x start_header_key
-%x start_header_val
+%x HEADER_KEY
+%x HEADER_VAL
 %%
 
 "\r\n" {
-    BEGIN(start_header_key);
+    BEGIN(HEADER_KEY);
     return T_CRLF;
 }
 
-<start_header_key>"\r\n" {
+<HEADER_KEY>"\r\n" {
     BEGIN(INITIAL);
     return T_CRLF;
 }
@@ -44,17 +44,17 @@ segement ({alphanum}|\.)+
 
 "HTTP" {return T_HTTP;}
 
-<start_header_key>:[ ]+ {
-    BEGIN(start_header_val);
+<HEADER_KEY>:[ ]+ {
+    BEGIN(HEADER_VAL);
     return T_COLON;
 }
 
-<start_header_key>[^:\r\n ]+ {
+<HEADER_KEY>[^:\r\n ]+ {
     yylval.str = strdup(yytext);
     return T_ANY;
 }
 
-<start_header_val>[^\r\n]+ {
+<HEADER_VAL>[^\r\n]+ {
     yylval.str = strdup(yytext);
     BEGIN(INITIAL);
     return T_ANY;
@@ -80,7 +80,6 @@ segement ({alphanum}|\.)+
     return T_ABS_PATH;
 }
 
-. { return *yytext; }
 %%
 
 int lex_read_line(FILE* fp, char *s, int len)

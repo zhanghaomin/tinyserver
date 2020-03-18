@@ -13,10 +13,10 @@ ODIR = src/obj
 _TOBJ = http_parser_test.o
 TOBJ = $(patsubst %, $(ODIR)/%, $(_TOBJ))
 
-_OBJ = ht.o parser.o scanner.o util.o net.o
+_OBJ = ht.o parser.o scanner.o util.o net.o response.o
 OBJ = $(patsubst %, $(ODIR)/%, $(_OBJ))
 
-_SOBJ = ht.o parser.o scanner.o util.o server.o net.o
+_SOBJ = ht.o parser.o scanner.o util.o server.o net.o response.o
 SOBJ = $(patsubst %, $(ODIR)/%, $(_SOBJ))
 
 _DEP = ht.h util.h http.h net.h
